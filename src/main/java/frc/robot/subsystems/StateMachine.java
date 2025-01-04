@@ -7,11 +7,9 @@ package frc.robot.subsystems;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.Constants.constClimber;
 import frc.robot.Constants.constStateMachine;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.commands.States.Climbing;
 import frc.robot.commands.States.Ejecting;
 import frc.robot.commands.States.IntakeSource;
 import frc.robot.commands.States.Intaking;

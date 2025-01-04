@@ -4,8 +4,6 @@
 
 package frc.robot.subsystems;
 
-import java.util.Optional;
-
 import com.frcteam3255.utils.LimelightHelpers;
 import com.frcteam3255.utils.LimelightHelpers.PoseEstimate;
 

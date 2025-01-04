@@ -4,8 +4,6 @@
 
 package frc.robot.commands;
 
-import java.util.function.DoubleSupplier;
-
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.units.Angle;
 import edu.wpi.first.units.Distance;
@@ -22,15 +20,17 @@ import frc.robot.subsystems.StateMachine;
 public class Drive extends Command {
   Drivetrain subDrivetrain;
   StateMachine subStateMachine;
-  DoubleSupplier xAxis, yAxis, rotationAxis;
+  double xAxis;
+    double yAxis;
+        double rotationAxis;
   boolean isOpenLoop;
   Trigger slowMode, north, south, east, west, chain, source, amp;
   Measure<Angle> northYaw, sourceYaw;
   double redAllianceMultiplier = 1;
   double slowMultiplier = 0;
 
-  public Drive(Drivetrain subDrivetrain, StateMachine subStateMachine, DoubleSupplier xAxis, DoubleSupplier yAxis,
-      DoubleSupplier rotationAxis, Trigger slowMode, Trigger chain, Trigger source, Trigger north, Trigger east,
+  public Drive(Drivetrain subDrivetrain, StateMachine subStateMachine, double xAxis, double yAxis,
+      double rotationAxis, Trigger slowMode, Trigger chain, Trigger source, Trigger north, Trigger east,
       Trigger south, Trigger west, Trigger amp) {
     this.subDrivetrain = subDrivetrain;
     this.subStateMachine = subStateMachine;
@@ -70,12 +70,12 @@ public class Drive extends Command {
     double transMultiplier = slowMultiplier * redAllianceMultiplier
         * prefDrivetrain.driveSpeed.getValue();
 
-    Measure<Velocity<Distance>> xVelocity = Units.MetersPerSecond.of(xAxis.getAsDouble() * transMultiplier);
-    Measure<Velocity<Distance>> yVelocity = Units.MetersPerSecond.of(-yAxis.getAsDouble() * transMultiplier);
+    Measure<Velocity<Distance>> xVelocity = Units.MetersPerSecond.of(xAxis * transMultiplier);
+    Measure<Velocity<Distance>> yVelocity = Units.MetersPerSecond.of(-yAxis * transMultiplier);
 
     Measure<Velocity<Angle>> rVelocity = Units.RadiansPerSecond
         .of(prefDrivetrain.maxManualTurnSpeed.in(Units.DegreesPerSecond))
-        .times(-rotationAxis.getAsDouble());
+        .times(-rotationAxis);
 
     // Requesting snapping ignores any previously calculated rotational speeds
     if (north.getAsBoolean()) {

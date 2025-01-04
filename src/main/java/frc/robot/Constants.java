@@ -10,12 +10,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import com.ctre.phoenix.led.ColorFlowAnimation;
-import com.ctre.phoenix.led.FireAnimation;
 import com.ctre.phoenix.led.RainbowAnimation;
 import com.ctre.phoenix.led.StrobeAnimation;
 import com.ctre.phoenix.led.TwinkleAnimation;
-import com.ctre.phoenix.led.ColorFlowAnimation.Direction;
 import com.ctre.phoenix.led.TwinkleAnimation.TwinklePercent;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.Slot1Configs;

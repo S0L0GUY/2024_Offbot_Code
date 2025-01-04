@@ -7,7 +7,7 @@ package frc.robot;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
-import com.frcteam3255.joystick.SN_XboxController;
+import com.frcteam3255.joystick.SN_Extreme3DStick;
 import com.pathplanner.lib.auto.NamedCommands;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -30,13 +30,10 @@ import frc.robot.RobotMap.mapControllers;
 import frc.robot.RobotPreferences.prefVision;
 import frc.robot.commands.AddVisionMeasurement;
 import frc.robot.commands.Drive;
-import frc.robot.commands.GamePieceRumble;
-import frc.robot.commands.ManualElevator;
 import frc.robot.commands.Autos.Centerline;
 import frc.robot.commands.Autos.PreloadOnly;
 import frc.robot.commands.Autos.PreloadTaxi;
 import frc.robot.commands.Autos.WingOnly;
-import frc.robot.commands.ManualPivot;
 import frc.robot.commands.Zeroing.ManualZeroElevator;
 import frc.robot.commands.Zeroing.ManualZeroShooterPivot;
 import frc.robot.commands.Zeroing.ZeroElevator;
@@ -51,14 +48,11 @@ import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.StateMachine;
 import frc.robot.subsystems.Transfer;
 import frc.robot.subsystems.StateMachine.RobotState;
-import frc.robot.subsystems.StateMachine.TargetState;
 import frc.robot.subsystems.Limelight;
 
 public class RobotContainer {
 
-  private final SN_XboxController conDriver = new SN_XboxController(mapControllers.DRIVER_USB);
-  private final SN_XboxController conOperator = new SN_XboxController(mapControllers.OPERATOR_USB);
-  private final SN_XboxController conTestOperator = new SN_XboxController(mapControllers.TEST_OPERATOR_USB);
+  private final SN_Extreme3DStick conDriver = new SN_Extreme3DStick(mapControllers.DRIVER_USB);
 
   private final static Climber subClimber = new Climber();
   private final static Drivetrain subDrivetrain = new Drivetrain();
@@ -102,26 +96,10 @@ public class RobotContainer {
   private static PowerDistribution PDH = new PowerDistribution(1, ModuleType.kRev);
 
   public RobotContainer() {
-    conDriver.setLeftDeadband(constControllers.DRIVER_LEFT_STICK_DEADBAND);
-
-    if (constControllers.SOLO_DRIVER) {
-      subDrivetrain
-          .setDefaultCommand(
-              new Drive(subDrivetrain, subStateMachine, conDriver.axis_LeftY, conDriver.axis_LeftX,
-                  conDriver.axis_RightX,
-                  conDriver.btn_LeftBumper, falseTrigger, falseTrigger,
-                  falseTrigger, falseTrigger, falseTrigger,
-                  falseTrigger, falseTrigger));
-
-    } else {
-      subDrivetrain
-          .setDefaultCommand(
-              new Drive(subDrivetrain, subStateMachine, conDriver.axis_LeftY, conDriver.axis_LeftX,
-                  conDriver.axis_RightX,
-                  conDriver.btn_LeftBumper, conDriver.btn_RightBumper, conDriver.btn_RightTrigger,
-                  conDriver.btn_Y, conDriver.btn_B, conDriver.btn_A,
-                  conDriver.btn_X, conDriver.btn_LeftTrigger));
-    }
+    
+    subDrivetrain.setDefaultCommand(
+        new Drive(subDrivetrain, subStateMachine, conDriver.getYAxis(), conDriver.getXAxis(), conDriver.getTwistAxis(),
+             falseTrigger, falseTrigger, falseTrigger, falseTrigger, falseTrigger, falseTrigger, falseTrigger, falseTrigger));
 
     // - Manual Triggers -
     gamePieceStoredTrigger
@@ -131,21 +109,18 @@ public class RobotContainer {
             .andThen(Commands.deferredProxy(
                 () -> subStateMachine.tryTargetState(subStateMachine, subIntake, subLEDs, subShooter, subTransfer,
                     subElevator, subDrivetrain))))
-        .onTrue(new GamePieceRumble(conDriver, conOperator).asProxy())
         .onTrue(Commands.runOnce(() -> subTransfer.setGamePieceCollected(true)));
 
     gamePieceCollectedTrigger
         .onTrue(Commands
             .runOnce(() -> conDriver.setRumble(RumbleType.kLeftRumble, constControllers.DRIVER_GP_COLLECTED_RUMBLE)))
-        .onTrue(Commands.runOnce(
-            () -> conOperator.setRumble(RumbleType.kLeftRumble, constControllers.OPERATOR_GP_COLLECTED_RUMBLE)))
         .onTrue(Commands.runOnce(() -> subLEDs.setLEDs(constLEDs.GAME_PIECE_COLLECTED_COLOR)));
 
     new Trigger(readyToShootOperator).onTrue(
-        Commands.runOnce(() -> conOperator.setRumble(RumbleType.kBothRumble,
+        Commands.runOnce(() -> conDriver.setRumble(RumbleType.kBothRumble,
             constControllers.OPERATOR_RUMBLE)))
         .onFalse(
-            Commands.runOnce(() -> conOperator.setRumble(RumbleType.kBothRumble, 0)));
+            Commands.runOnce(() -> conDriver.setRumble(RumbleType.kBothRumble, 0)));
 
     new Trigger(readyToShootDriver).onTrue(
         Commands.runOnce(() -> conDriver.setRumble(RumbleType.kBothRumble,
@@ -164,192 +139,25 @@ public class RobotContainer {
 
     subDrivetrain.resetModulesToAbsolute();
 
-    conDriver.setTriggerPressThreshold(0.2);
-
     NamedCommands.registerCommand("Intaking", Commands.deferredProxy(
         () -> subStateMachine.tryState(RobotState.INTAKING))
         .until(gamePieceStoredTrigger));
 
     SmartDashboard.putNumber("Preload Only Delay", 0);
 
-    if (constControllers.SOLO_DRIVER) {
-      configureSoloDriverBindings(conDriver);
-    } else {
-      configureDriverBindings(conDriver);
-    }
-    configureOperatorBindings(conOperator);
-    configureTestBindings(conTestOperator);
-
+    configureDriverBindings(conDriver);
     configureAutoSelector();
   }
 
-  private void configureDriverBindings(SN_XboxController controller) {
+  private void configureDriverBindings(SN_Extreme3DStick controller) {
     // Reset Pose
-    controller.btn_North.onTrue(
+    controller.btn_1.onTrue(
         Commands.runOnce(() -> subDrivetrain.resetPoseToPose(constField.getFieldPositions().get()[6].toPose2d())));
 
     // Intake from source
-    controller.btn_East.whileTrue(Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.INTAKE_SOURCE)))
+    controller.btn_2.whileTrue(Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.INTAKE_SOURCE)))
         .onFalse(Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.NONE))
             .unless(() -> comIntakeSource.getIntakeSourceGamePiece()));
-  }
-
-  private void configureSoloDriverBindings(SN_XboxController controller) {
-    // Reset Pose
-    controller.btn_Start.onTrue(
-        Commands.runOnce(() -> subDrivetrain.resetPoseToPose(constField.getFieldPositions().get()[6].toPose2d())));
-
-    // -- States --
-    // Intake
-    controller.btn_LeftTrigger
-        .whileTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.INTAKING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE))
-            .unless(gamePieceStoredTrigger));
-
-    // Shoot
-    controller.btn_RightTrigger.whileTrue(
-        Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.SHOOTING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE))
-            .unless(gamePieceStoredTrigger));
-
-    // Prep with vision
-    controller.btn_RightBumper.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_VISION)))
-        .onTrue(Commands
-            .deferredProxy(
-                () -> subStateMachine.tryState(RobotState.PREP_VISION)));
-
-    // Ejecting
-    controller.btn_Back.whileTrue(Commands.deferredProxy(
-        () -> subStateMachine.tryState(RobotState.EJECTING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE)));
-
-    // Prep spike
-    controller.btn_X.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SPIKE)))
-        .onTrue(
-            Commands.deferredProxy(
-                () -> subStateMachine.tryState(RobotState.PREP_SPIKE)));
-
-    controller.btn_B.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_AMP)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_AMP)));
-
-    controller.btn_Y.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SUB_BACKWARDS)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SUB_BACKWARDS)));
-
-    // "Unalive Shooter"
-    controller.btn_A.onTrue(
-        Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.PREP_NONE))
-            .alongWith(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_NONE))))
-        .onFalse(Commands.runOnce(() -> subShooter.setShootingNeutralOutput()));
-
-    // Prep subwoofer
-    controller.btn_South.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SPEAKER)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SPEAKER)));
-
-    // Prep wing
-    controller.btn_North.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_WING)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_WING)));
-
-    // Prep shuffle
-    controller.btn_West.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SHUFFLE)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SHUFFLE)));
-
-    // Game Piece Override
-    controller.btn_East.onTrue(Commands.runOnce(() -> subTransfer.setGamePieceCollected(true))
-        .alongWith(Commands.runOnce(() -> subStateMachine.setRobotState(RobotState.STORE_FEEDER))));
-
-  }
-
-  private void configureOperatorBindings(SN_XboxController controller) {
-    // -- States --
-    // Intake
-    controller.btn_LeftTrigger
-        .whileTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.INTAKING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE))
-            .unless(gamePieceStoredTrigger));
-
-    // Shoot
-    controller.btn_RightTrigger.whileTrue(
-        Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.SHOOTING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE))
-            .unless(gamePieceStoredTrigger));
-
-    // Prep with vision
-    controller.btn_RightBumper.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_VISION)))
-        .onTrue(Commands
-            .deferredProxy(
-                () -> subStateMachine.tryState(RobotState.PREP_VISION)));
-
-    // Ejecting
-    controller.btn_LeftBumper.whileTrue(Commands.deferredProxy(
-        () -> subStateMachine.tryState(RobotState.EJECTING)))
-        .onFalse(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.NONE)));
-
-    // Prep spike
-    controller.btn_X.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SPIKE)))
-        .onTrue(
-            Commands.deferredProxy(
-                () -> subStateMachine.tryState(RobotState.PREP_SPIKE)));
-
-    controller.btn_B.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_AMP)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_AMP)));
-
-    controller.btn_Y.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SUB_BACKWARDS)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SUB_BACKWARDS)));
-
-    // "Unalive Shooter"
-    controller.btn_A.onTrue(
-        Commands.deferredProxy(() -> subStateMachine.tryState(RobotState.PREP_NONE))
-            .alongWith(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_NONE))))
-        .onFalse(Commands.runOnce(() -> subShooter.setShootingNeutralOutput()));
-
-    // Prep subwoofer
-    controller.btn_South.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SPEAKER)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SPEAKER)));
-
-    // Prep wing
-    controller.btn_North.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_WING)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_WING)));
-
-    // Prep shuffle
-    controller.btn_West.onTrue(Commands.runOnce(() -> subStateMachine.setTargetState(TargetState.PREP_SHUFFLE)))
-        .onTrue(Commands.deferredProxy(
-            () -> subStateMachine.tryState(RobotState.PREP_SHUFFLE)));
-
-    // Game Piece Override
-    controller.btn_East.onTrue(Commands.runOnce(() -> subTransfer.setGamePieceCollected(true))
-        .alongWith(Commands.runOnce(() -> subStateMachine.setRobotState(RobotState.STORE_FEEDER))));
-
-    // Manual Shooter Pivot
-    controller.btn_Back.whileTrue(new ManualPivot(subShooter, controller.axis_RightY));
-
-    // Manual Elevator Pivot
-    controller.btn_Start.whileTrue(new ManualElevator(subElevator, controller.axis_LeftY));
-
-    // Zero Elevator and Climber
-    controller.btn_LeftStick.onTrue(new ZeroElevator(subElevator));
-
-    // Zero Shooter
-    controller.btn_RightStick.onTrue(new ZeroShooterPivot(subShooter));
-  }
-
-  private void configureTestBindings(SN_XboxController controller) {
   }
 
   private void configureAutoSelector() {

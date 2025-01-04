@@ -11,7 +11,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import au.grapplerobotics.ConfigurationFailedException;
 import au.grapplerobotics.LaserCan;
 import au.grapplerobotics.LaserCan.Measurement;
-import au.grapplerobotics.LaserCan.TimingBudget;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;

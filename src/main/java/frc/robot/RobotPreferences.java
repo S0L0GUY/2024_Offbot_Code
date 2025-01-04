@@ -1,7 +1,5 @@
 package frc.robot;
 
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.Slot1Configs;
 import com.frcteam3255.preferences.SN_DoublePreference;
 
 import edu.wpi.first.units.Angle;
